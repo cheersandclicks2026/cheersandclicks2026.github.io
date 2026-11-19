@@ -7,6 +7,7 @@
   const FIRST_RETRY_MS = 2000;
   const REQUEST_TIMEOUT_MS = 120000;
   const FATAL_ERRORS = ['bad code', 'too large', 'no image', 'empty request'];
+  const TRANSIENT_ERROR = /too many|simultaneous|unavailable|server error|timed? ?out|try again|rate|quota|exceeded|busy/i;
   const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif', 'image/webp': 'webp' };
 
   const $ = (id) => document.getElementById(id);
@@ -312,8 +313,16 @@
         redirect: 'follow',
         signal: ctrl.signal,
       });
-      const data = await res.json();
-      return data;
+      if (res.status === 429 || res.status >= 500) throw new Error(`HTTP ${res.status}`); // transient → retry
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Got a page instead of JSON — usually the deployment isn't set to "Anyone" or the URL is wrong.
+        const err = new Error('unexpected reply from the upload service (check the Apps Script deployment is set to "Anyone")');
+        err.name = 'BadReply';
+        throw err;
+      }
     } finally {
       clearTimeout(timer);
     }
@@ -342,17 +351,22 @@
 
       let delay = FIRST_RETRY_MS;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        let reason = 'Connection problem';
         try {
           const data = await postOnce(body);
           if (data && data.ok) { ok = true; break; }
           const msg = (data && data.error) || 'unknown error';
-          if (FATAL_ERRORS.includes(msg)) { fatal = msg; break; }
+          // Only retry errors that can fix themselves (busy / quota / timeout). Setup errors fail fast.
+          if (FATAL_ERRORS.includes(msg) || !TRANSIENT_ERROR.test(msg)) { fatal = msg; break; }
+          reason = 'Upload service busy';
+          console.warn(`Upload attempt ${attempt}: server said "${msg}"`);
         } catch (e) {
+          if (e && e.name === 'BadReply') { fatal = e.message; break; }
           console.warn(`Upload attempt ${attempt} failed`, e);
         }
         if (attempt < MAX_ATTEMPTS) {
           for (let s = Math.round(delay / 1000); s > 0; s--) {
-            el.sendingText.textContent = `Busy — retrying in ${s}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`;
+            el.sendingText.textContent = `${reason} — retrying in ${s}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`;
             await sleep(1000);
           }
           el.sendingText.textContent = `Sending… (try ${attempt + 1} of ${MAX_ATTEMPTS})`;
@@ -380,6 +394,7 @@
       el.sendBtn.lastChild.textContent = ' Try again';
       const why = fatal === 'too large' ? 'This photo is too large to upload.'
         : fatal === 'bad code' ? 'Upload rejected (event code mismatch).'
+        : fatal ? `Upload failed: ${fatal}.`
         : 'Couldn’t send your photo. Check your connection and try again.';
       setStatus(why + ' You can still save it to your phone.', 'error');
     }
