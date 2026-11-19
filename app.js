@@ -15,7 +15,7 @@
     screens: document.querySelectorAll('.screen'),
     video: $('video'), countdown: $('countdown'), flash: $('flash'), hint: $('cameraHint'),
     startBtn: $('startBtn'), welcomeNativeBtn: $('welcomeNativeBtn'),
-    shutterBtn: $('shutterBtn'), flipBtn: $('flipBtn'), nativeBtn: $('nativeBtn'), nativeInput: $('nativeInput'),
+    shutterBtn: $('shutterBtn'), timerBtn: $('timerBtn'), timerLabel: $('timerLabel'), flipBtn: $('flipBtn'), nativeBtn: $('nativeBtn'), nativeInput: $('nativeInput'),
     previewImg: $('previewImg'), photoMeta: $('photoMeta'),
     sendingOverlay: $('sendingOverlay'), sendingText: $('sendingText'),
     doneOverlay: $('doneOverlay'), burst: $('burst'),
@@ -30,6 +30,7 @@
     stream: null,
     facing: 'environment',     // back camera by default
     busy: false,               // countdown / capture in progress
+    timer: true,               // 3-2-1 countdown on/off (remembered per device)
     uploading: false,
     sent: false,
     photo: null,               // { blob, mime, name, url, base64 }
@@ -160,11 +161,12 @@
     state.busy = true;
     el.shutterBtn.disabled = true;
     el.flipBtn.disabled = true;
+    el.timerBtn.disabled = true;
     el.nativeBtn.disabled = true;
     el.hint.style.opacity = '0';
 
     try {
-      for (const n of [3, 2, 1]) {
+      for (const n of state.timer ? [3, 2, 1] : []) {
         el.countdown.innerHTML = `<span>${n}</span>`;
         await sleep(1000);
       }
@@ -186,6 +188,7 @@
       state.busy = false;
       el.shutterBtn.disabled = false;
       el.flipBtn.disabled = false;
+      el.timerBtn.disabled = false;
       el.nativeBtn.disabled = false;
     }
   }
@@ -430,6 +433,11 @@
   el.errorNativeBtn.addEventListener('click', openNative);
   el.errorRetryBtn.addEventListener('click', startCamera);
   el.shutterBtn.addEventListener('click', capture);
+  el.timerBtn.addEventListener('click', () => {
+    if (state.busy) return;
+    setTimer(!state.timer);
+    try { localStorage.setItem('cc-timer', state.timer ? 'on' : 'off'); } catch { /* storage blocked */ }
+  });
   el.flipBtn.addEventListener('click', () => {
     if (state.busy) return;
     state.facing = state.facing === 'environment' ? 'user' : 'environment';
@@ -451,6 +459,15 @@
   window.addEventListener('beforeunload', (e) => {
     if (state.uploading) { e.preventDefault(); e.returnValue = ''; }
   });
+
+  function setTimer(on) {
+    state.timer = on;
+    el.timerBtn.classList.toggle('on', on);
+    el.timerBtn.setAttribute('aria-checked', String(on));
+    el.timerLabel.textContent = on ? '3s' : 'Off';
+    el.shutterBtn.setAttribute('aria-label', on ? 'Take photo (3 second countdown)' : 'Take photo now');
+  }
+  try { if (localStorage.getItem('cc-timer') === 'off') setTimer(false); } catch { /* storage blocked */ }
 
   makeBubbles();
 })();
