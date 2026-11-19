@@ -20,7 +20,7 @@ Setup takes about 20 minutes. It's done in this order: Drive folder → Apps Scr
 ## 2. Create the upload endpoint (Google Apps Script)
 1. Go to <https://script.google.com> → **New project**, and rename it `CheersAndClicks Upload`.
 2. Delete the sample code and paste the full contents of [apps-script/Code.gs](apps-script/Code.gs).
-3. Set `FOLDER_ID` to the ID from step 1. If you want your own `EVENT_CODE`, change it here and in `config.js`, keeping both the same.
+3. Set `FOLDER_ID` to the ID from step 1 (the full folder link also works). If you want your own `EVENT_CODE`, change it here and in `config.js`, keeping both the same.
 4. Click **Save**.
 5. Click **Deploy → New deployment** → the gear icon → **Web app**, then set:
    - Description: `v1`
@@ -68,6 +68,8 @@ This creates `qr/cheersandclicks-qr.png` (2000 px, for print) and `qr/cheersandc
 3. Unzip it and upload the photos to your SharePoint folder by drag and drop.
 
 ---
+
+> **Whenever you change `config.js`, `app.js` or `styles.css`:** bump `?v=2` → `?v=3` (etc.) on the matching lines at the bottom/top of `index.html`, so phones load the new file instead of a cached copy.
 
 ### Good to know
 - **Quality:** on Android/Chrome, photos are true full-resolution stills. On iPhone, the in-page camera captures the video frame (usually around 1080p to 4K). For the full-quality iPhone photo, guests tap **Max quality**, which opens the iPhone Camera app.

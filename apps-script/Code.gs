@@ -26,7 +26,9 @@ function doPost(e) {
 
     const name = String(d.fileName || 'photo.jpg').replace(/[^\w.\-]/g, '_').slice(0, 120);
     const mime = ALLOWED_MIME.test(d.mimeType) ? d.mimeType : 'image/jpeg';
-    const folder = DriveApp.getFolderById(FOLDER_ID);
+    // Accept either the bare ID or a full "drive.google.com/drive/folders/<ID>" link.
+    const folderId = (String(FOLDER_ID).match(/folders\/([\w-]+)/) || [null, String(FOLDER_ID).trim()])[1];
+    const folder = DriveApp.getFolderById(folderId);
 
     // Idempotent: if a retry arrives for a photo that was already saved, don't create a duplicate.
     if (folder.getFilesByName(name).hasNext()) return out({ ok: true, duplicate: true });
