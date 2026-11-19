@@ -1,0 +1,11 @@
+{
+  "name": "cheersandclicks-qr",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "qr": "node make-qr.mjs"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  }
+}

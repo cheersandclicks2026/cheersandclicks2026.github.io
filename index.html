@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cheers &amp; Clicks 2026</title>
+  <meta name="description" content="Snap a photo at Cheers & Clicks 2026 and add it to the event album.">
+  <meta name="theme-color" content="#0b0d17">
+  <meta property="og:title" content="Cheers &amp; Clicks 2026">
+  <meta property="og:description" content="Capture the moment — add your photo to the event album.">
+  <meta property="og:type" content="website">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f5d68a'/%3E%3Cstop offset='1' stop-color='%23c9973f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230b0d17'/%3E%3Cpath d='M32 8 C34 26 38 30 56 32 C38 34 34 38 32 56 C30 38 26 34 8 32 C26 30 30 26 32 8Z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <div class="bg-glow"></div>
+    <div class="bubbles" id="bubbles"></div>
+  </div>
+
+  <main class="app" id="app">
+
+    <!-- WELCOME -->
+    <section class="screen screen-welcome active" data-screen="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-inner">
+        <p class="eyebrow"><span class="spark">✦</span> You're invited to snap <span class="spark">✦</span></p>
+        <h1 class="wordmark" id="welcome-title">
+          <span class="wm-line">Cheers</span>
+          <span class="wm-amp">&amp;</span>
+          <span class="wm-line">Clicks</span>
+        </h1>
+        <p class="year">2026</p>
+        <p class="tagline">Capture the moment. Every photo lands in our event album.</p>
+
+        <button class="btn btn-gold btn-xl" id="startBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-1.8A2 2 0 0 1 10.6 3.4h2.8a2 2 0 0 1 1.6.8L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.4" r="3.4"/></svg>
+          Start camera
+        </button>
+        <button class="btn btn-ghost" id="welcomeNativeBtn" type="button">Use my phone's camera app instead</button>
+        <p class="fineprint">We'll ask for camera permission. Photos are only shared with the event organisers.</p>
+      </div>
+    </section>
+
+    <!-- CAMERA -->
+    <section class="screen screen-camera" data-screen="camera" aria-label="Camera">
+      <header class="topbar">
+        <span class="mini-wordmark">Cheers <em>&amp;</em> Clicks <span>2026</span></span>
+      </header>
+
+      <div class="viewport">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="viewport-frame" aria-hidden="true"></div>
+        <div class="countdown" id="countdown" aria-live="assertive"></div>
+        <div class="flash" id="flash" aria-hidden="true"></div>
+        <p class="viewport-hint" id="cameraHint">Strike a pose ✦</p>
+      </div>
+
+      <div class="controls">
+        <button class="icon-btn" id="nativeBtn" type="button" aria-label="Use my phone's camera app (max quality)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="12" cy="12" r="3.6"/><path d="M7 8.2h.01"/></svg>
+          <span>Max quality</span>
+        </button>
+
+        <button class="shutter" id="shutterBtn" type="button" aria-label="Take photo (3 second countdown)">
+          <span class="shutter-inner"></span>
+        </button>
+
+        <button class="icon-btn" id="flipBtn" type="button" aria-label="Switch camera">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14.3-3.3L20 7.5"/><path d="M20 3.5v4h-4"/><path d="M20 15a8 8 0 0 1-14.3 3.3L4 16.5"/><path d="M4 20.5v-4h4"/></svg>
+          <span>Flip</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PREVIEW / SENDING / DONE -->
+    <section class="screen screen-preview" data-screen="preview" aria-label="Your photo">
+      <header class="topbar">
+        <span class="mini-wordmark">Cheers <em>&amp;</em> Clicks <span>2026</span></span>
+      </header>
+
+      <div class="photo-card" id="photoCard">
+        <img id="previewImg" alt="Your captured photo">
+        <div class="photo-meta" id="photoMeta"></div>
+
+        <div class="sending-overlay" id="sendingOverlay" aria-hidden="true">
+          <div class="ring"></div>
+          <p id="sendingText">Sending…</p>
+        </div>
+
+        <div class="done-overlay" id="doneOverlay" aria-hidden="true">
+          <div class="burst" id="burst"></div>
+          <svg class="check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg>
+          <p class="done-title">Added to the album!</p>
+          <p class="done-sub">Thanks for sharing the moment ✦</p>
+        </div>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+
+      <div class="actions" id="actionsReview">
+        <button class="btn btn-ghost" id="retakeBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 3.5v4h4"/></svg>
+          Retake
+        </button>
+        <button class="btn btn-gold" id="sendBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg>
+          Send to album
+        </button>
+      </div>
+
+      <div class="actions" id="actionsDone" hidden>
+        <button class="btn btn-ghost" id="anotherBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-1.8A2 2 0 0 1 10.6 3.4h2.8a2 2 0 0 1 1.6.8L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.4" r="3.4"/></svg>
+          Take another
+        </button>
+        <button class="btn btn-gold" id="saveDoneBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 19.5h14"/></svg>
+          Save to my phone
+        </button>
+      </div>
+
+      <button class="link-btn" id="saveBtn" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 19.5h14"/></svg>
+        Save a copy to my phone
+      </button>
+    </section>
+
+    <!-- ERROR -->
+    <section class="screen screen-error" data-screen="error" aria-labelledby="error-title">
+      <div class="error-inner">
+        <div class="error-icon" aria-hidden="true">!</div>
+        <h2 id="error-title">Camera unavailable</h2>
+        <p id="errorText">We couldn't open your camera.</p>
+        <ol class="error-steps" id="errorSteps" hidden></ol>
+        <button class="btn btn-gold" id="errorNativeBtn" type="button">Use my phone's camera app</button>
+        <button class="btn btn-ghost" id="errorRetryBtn" type="button">Try again</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Native camera / file fallback (full-resolution original) -->
+  <input type="file" id="nativeInput" accept="image/*" capture="environment" class="visually-hidden" tabindex="-1" aria-hidden="true">
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
