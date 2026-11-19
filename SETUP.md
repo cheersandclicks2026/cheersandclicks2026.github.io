@@ -58,6 +58,7 @@ This creates `qr/cheersandclicks-qr.png` (2000 px, for print) and `qr/cheersandc
 - [ ] **Send to album**: the photo appears in the Drive folder within a few seconds.
 - [ ] **Max quality** (phone camera app) works, and that photo arrives as well.
 - [ ] **Save to my phone** opens the share sheet or downloads the photo.
+- [ ] **Upload from my photos**: pick several photos from the camera roll (up to 20 at a time). Each tile gets a gold tick, and the photos appear in Drive.
 - [ ] Look at the resolution label on the preview (for example `4032 × 3024 · 12.2 MP · 3.8 MB`) to see the real quality from each phone.
 - [ ] **Load test**: have about 10 people send at the same moment, and check that all the photos arrive. If the endpoint is busy, the page retries automatically.
 - [ ] Turn on airplane mode and press Send. The page should show an error and let you **Try again** or save the photo.

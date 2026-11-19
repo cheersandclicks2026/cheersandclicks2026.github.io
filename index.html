@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -41,8 +41,12 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-1.8A2 2 0 0 1 10.6 3.4h2.8a2 2 0 0 1 1.6.8L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.4" r="3.4"/></svg>
           Start camera
         </button>
-        <button class="btn btn-ghost" id="welcomeNativeBtn" type="button">Use my phone's camera app instead</button>
-        <p class="fineprint">We'll ask for camera permission. Photos are only shared with the event organisers.</p>
+        <button class="btn btn-ghost btn-xl" id="welcomeGalleryBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5l-5-5-8.5 9"/></svg>
+          Upload from my photos
+        </button>
+        <button class="link-btn" id="welcomeNativeBtn" type="button">Or use my phone's camera app (max quality)</button>
+        <p class="fineprint">The camera asks for permission first. Photos are only shared with the event organisers.</p>
       </div>
     </section>
 
@@ -55,19 +59,25 @@
       <div class="viewport">
         <video id="video" playsinline muted autoplay></video>
         <div class="viewport-frame" aria-hidden="true"></div>
-        <button class="timer-chip on" id="timerBtn" type="button" role="switch" aria-checked="true" aria-label="3 second countdown timer">
+        <div class="viewport-chips">
+          <button class="chip" id="nativeBtn" type="button" aria-label="Use my phone's camera app (max quality)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="12" cy="12" r="3.6"/><path d="M7 8.2h.01"/></svg>
+            <span>Max quality</span>
+          </button>
+        <button class="chip on" id="timerBtn" type="button" role="switch" aria-checked="true" aria-label="3 second countdown timer">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5"/><path d="M9.5 2.5h5"/><path d="M12 2.5v3.5"/></svg>
           <span id="timerLabel">3s</span>
         </button>
+        </div>
         <div class="countdown" id="countdown" aria-live="assertive"></div>
         <div class="flash" id="flash" aria-hidden="true"></div>
         <p class="viewport-hint" id="cameraHint">Strike a pose ✦</p>
       </div>
 
       <div class="controls">
-        <button class="icon-btn" id="nativeBtn" type="button" aria-label="Use my phone's camera app (max quality)">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="3"/><circle cx="12" cy="12" r="3.6"/><path d="M7 8.2h.01"/></svg>
-          <span>Max quality</span>
+        <button class="icon-btn" id="galleryBtn" type="button" aria-label="Upload from my photos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5l-5-5-8.5 9"/></svg>
+          <span>Photos</span>
         </button>
 
         <button class="shutter" id="shutterBtn" type="button" aria-label="Take photo (3 second countdown)">
@@ -90,6 +100,7 @@
       <div class="photo-card" id="photoCard">
         <img id="previewImg" alt="Your captured photo">
         <div class="photo-meta" id="photoMeta"></div>
+        <div class="photo-grid" id="photoGrid" hidden></div>
 
         <div class="sending-overlay" id="sendingOverlay" aria-hidden="true">
           <div class="ring"></div>
@@ -99,7 +110,7 @@
         <div class="done-overlay" id="doneOverlay" aria-hidden="true">
           <div class="burst" id="burst"></div>
           <svg class="check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg>
-          <p class="done-title">Added to the album!</p>
+          <p class="done-title" id="doneTitle">Added to the album!</p>
           <p class="done-sub">Thanks for sharing the moment ✦</p>
         </div>
       </div>
@@ -126,6 +137,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10.5l5 5 5-5"/><path d="M5 19.5h14"/></svg>
           Save to my phone
         </button>
+        <button class="btn btn-gold" id="moreBtn" type="button" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5l-5-5-8.5 9"/></svg>
+          Upload more
+        </button>
       </div>
 
       <button class="link-btn" id="saveBtn" type="button">
@@ -142,15 +157,18 @@
         <p id="errorText">We couldn't open your camera.</p>
         <ol class="error-steps" id="errorSteps" hidden></ol>
         <button class="btn btn-gold" id="errorNativeBtn" type="button">Use my phone's camera app</button>
-        <button class="btn btn-ghost" id="errorRetryBtn" type="button">Try again</button>
+        <button class="btn btn-ghost" id="errorGalleryBtn" type="button">Upload from my photos</button>
+        <button class="link-btn" id="errorRetryBtn" type="button">Try the camera again</button>
       </div>
     </section>
   </main>
 
   <!-- Native camera / file fallback (full-resolution original) -->
   <input type="file" id="nativeInput" accept="image/*" capture="environment" class="visually-hidden" tabindex="-1" aria-hidden="true">
+  <!-- Photo library / camera roll (multiple) -->
+  <input type="file" id="galleryInput" accept="image/*" multiple class="visually-hidden" tabindex="-1" aria-hidden="true">
 
   <script src="config.js?v=3"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

@@ -8,13 +8,16 @@
   const REQUEST_TIMEOUT_MS = 120000;
   const FATAL_ERRORS = ['bad code', 'too large', 'no image', 'empty request'];
   const TRANSIENT_ERROR = /too many|simultaneous|unavailable|server error|timed? ?out|try again|rate|quota|exceeded|busy/i;
+  const MAX_BATCH = 20;
+  const MAX_FILE_BYTES = 35 * 1024 * 1024; // must match MAX_BYTES in apps-script/Code.gs
   const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/heif': 'heif', 'image/webp': 'webp' };
 
   const $ = (id) => document.getElementById(id);
   const el = {
     screens: document.querySelectorAll('.screen'),
     video: $('video'), countdown: $('countdown'), flash: $('flash'), hint: $('cameraHint'),
-    startBtn: $('startBtn'), welcomeNativeBtn: $('welcomeNativeBtn'),
+    startBtn: $('startBtn'), welcomeNativeBtn: $('welcomeNativeBtn'), welcomeGalleryBtn: $('welcomeGalleryBtn'),
+    galleryBtn: $('galleryBtn'), galleryInput: $('galleryInput'), photoGrid: $('photoGrid'), doneTitle: $('doneTitle'), moreBtn: $('moreBtn'),
     shutterBtn: $('shutterBtn'), timerBtn: $('timerBtn'), timerLabel: $('timerLabel'), flipBtn: $('flipBtn'), nativeBtn: $('nativeBtn'), nativeInput: $('nativeInput'),
     previewImg: $('previewImg'), photoMeta: $('photoMeta'),
     sendingOverlay: $('sendingOverlay'), sendingText: $('sendingText'),
@@ -23,7 +26,7 @@
     retakeBtn: $('retakeBtn'), sendBtn: $('sendBtn'), saveBtn: $('saveBtn'),
     anotherBtn: $('anotherBtn'), saveDoneBtn: $('saveDoneBtn'),
     errorTitle: $('error-title'), errorText: $('errorText'), errorSteps: $('errorSteps'),
-    errorNativeBtn: $('errorNativeBtn'), errorRetryBtn: $('errorRetryBtn'),
+    errorNativeBtn: $('errorNativeBtn'), errorRetryBtn: $('errorRetryBtn'), errorGalleryBtn: $('errorGalleryBtn'),
   };
 
   const state = {
@@ -32,9 +35,8 @@
     busy: false,               // countdown / capture in progress
     timer: true,               // 3-2-1 countdown on/off (remembered per device)
     uploading: false,
-    sent: false,
-    photo: null,               // { blob, mime, name, url, base64 }
-    lastSource: 'camera',      // 'camera' | 'native'
+    photos: [],                // [{ blob, mime, name, url, base64, status, tile }]
+    lastSource: 'camera',      // 'camera' | 'native' | 'gallery'
   };
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -163,6 +165,7 @@
     el.flipBtn.disabled = true;
     el.timerBtn.disabled = true;
     el.nativeBtn.disabled = true;
+    el.galleryBtn.disabled = true;
     el.hint.style.opacity = '0';
 
     try {
@@ -177,8 +180,7 @@
 
       const shot = await takePhoto(track);
       el.video.pause();
-      state.lastSource = 'camera';
-      setPhoto(shot.blob, shot.mime);
+      setPhotos([{ blob: shot.blob, mime: shot.mime }], 'camera');
     } catch (err) {
       console.error(err);
       el.hint.textContent = 'Oops — try that again ✦';
@@ -190,6 +192,7 @@
       el.flipBtn.disabled = false;
       el.timerBtn.disabled = false;
       el.nativeBtn.disabled = false;
+      el.galleryBtn.disabled = false;
     }
   }
 
@@ -224,21 +227,33 @@
     return { blob, mime: 'image/jpeg' };
   }
 
-  /* ---------------- Native camera app (full-resolution original) ---------------- */
+  /* ---------------- Native camera app & photo library ---------------- */
   function openNative() { el.nativeInput.click(); }
+  function openGallery() { el.galleryInput.click(); }
+
+  function mimeOf(file) {
+    if (file.type) return file.type;
+    const ext = (file.name.split('.').pop() || '').toLowerCase().replace('jpeg', 'jpg');
+    return Object.keys(EXT).find((m) => EXT[m] === ext) || 'image/jpeg';
+  }
 
   el.nativeInput.addEventListener('change', () => {
     const file = el.nativeInput.files && el.nativeInput.files[0];
     el.nativeInput.value = '';
     if (!file) return;
-    let mime = file.type;
-    if (!mime) {
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      mime = Object.keys(EXT).find((m) => EXT[m] === ext || (ext === 'jpeg' && m === 'image/jpeg')) || 'image/jpeg';
-    }
     if (state.stream) el.video.pause();
-    state.lastSource = 'native';
-    setPhoto(file, mime);
+    setPhotos([{ blob: file, mime: mimeOf(file) }], 'native');
+  });
+
+  el.galleryInput.addEventListener('change', () => {
+    const files = Array.from(el.galleryInput.files || []).filter((f) => !f.type || f.type.startsWith('image/'));
+    el.galleryInput.value = '';
+    if (!files.length) return;
+    if (state.stream) el.video.pause();
+    setPhotos(files.slice(0, MAX_BATCH).map((f) => ({ blob: f, mime: mimeOf(f) })), 'gallery');
+    if (files.length > MAX_BATCH) {
+      setStatus(`You picked ${files.length} — we'll send the first ${MAX_BATCH}. Tap “Upload more” after for the rest.`);
+    }
   });
 
   /* ---------------- Preview ---------------- */
@@ -250,48 +265,101 @@
     return `${CFG.FILE_PREFIX || 'CheersAndClicks2026'}_${stamp}_${rand}.${EXT[mime] || 'jpg'}`;
   }
 
-  function setPhoto(blob, mime) {
-    clearPhoto();
-    const url = URL.createObjectURL(blob);
-    state.photo = { blob, mime, name: makeFileName(mime), url, base64: null };
-    state.sent = false;
+  function setTile(photo, status) {
+    photo.status = status;
+    if (photo.tile) photo.tile.dataset.status = status;
+  }
 
-    el.photoMeta.textContent = formatMB(blob.size);
-    el.previewImg.onload = () => {
-      const { naturalWidth: w, naturalHeight: h } = el.previewImg;
-      if (w && h) el.photoMeta.textContent = `${w} × ${h} · ${(w * h / 1e6).toFixed(1)} MP · ${formatMB(blob.size)}`;
-    };
-    el.previewImg.src = url;
+  // items: [{ blob, mime }], source: 'camera' | 'native' | 'gallery'
+  function setPhotos(items, source) {
+    clearPhotos();
+    state.lastSource = source;
+    state.photos = items.map(({ blob, mime }) => ({
+      blob, mime, name: makeFileName(mime), url: URL.createObjectURL(blob), base64: null, status: 'pending', tile: null,
+    }));
+    const n = state.photos.length;
+    const multi = n > 1;
+    const fromGallery = source === 'gallery';
 
+    el.previewImg.hidden = multi;
+    el.photoMeta.hidden = multi;
+    el.photoGrid.hidden = !multi;
+    el.photoGrid.innerHTML = '';
+
+    if (multi) {
+      state.photos.forEach((p, i) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        tile.dataset.status = 'pending';
+        tile.dataset.ext = (EXT[p.mime] || 'photo').toUpperCase();
+        const img = document.createElement('img');
+        img.alt = `Photo ${i + 1}`;
+        img.decoding = 'async';
+        img.onerror = () => tile.classList.add('no-thumb'); // e.g. HEIC on some browsers
+        img.src = p.url;
+        const badge = document.createElement('span');
+        badge.className = 'tile-badge';
+        tile.append(img, badge);
+        p.tile = tile;
+        el.photoGrid.appendChild(tile);
+      });
+    } else {
+      const p = state.photos[0];
+      el.photoMeta.textContent = formatMB(p.blob.size);
+      el.previewImg.onload = () => {
+        const { naturalWidth: w, naturalHeight: h } = el.previewImg;
+        if (w && h) el.photoMeta.textContent = `${w} × ${h} · ${(w * h / 1e6).toFixed(1)} MP · ${formatMB(p.blob.size)}`;
+      };
+      el.previewImg.src = p.url;
+    }
+
+    el.doneTitle.textContent = multi ? `${n} photos added!` : 'Added to the album!';
     el.sendingOverlay.classList.remove('show');
     el.doneOverlay.classList.remove('show');
     el.actionsReview.hidden = false;
     el.actionsDone.hidden = true;
-    el.saveBtn.hidden = false;
+    el.saveBtn.hidden = fromGallery;          // already on their phone
+    el.saveDoneBtn.hidden = fromGallery;
+    el.moreBtn.hidden = !fromGallery;
+    el.retakeBtn.lastChild.textContent = source === 'camera' ? ' Retake' : ' Choose again';
+    el.anotherBtn.lastChild.textContent = fromGallery ? ' Take a photo' : ' Take another';
     el.sendBtn.disabled = false;
     el.retakeBtn.disabled = false;
-    el.sendBtn.lastChild.textContent = ' Send to album';
-    setStatus(isConfigured() ? 'Looking good? Send it to the album.' : '');
+    el.sendBtn.lastChild.textContent = multi ? ` Send ${n} photos` : ' Send to album';
+    setStatus(!isConfigured() ? '' : multi ? `${n} photos ready — send them to the album.` : 'Looking good? Send it to the album.');
     show('preview');
   }
 
-  function clearPhoto() {
-    if (state.photo && state.photo.url) URL.revokeObjectURL(state.photo.url);
-    state.photo = null;
+  function clearPhotos() {
+    state.photos.forEach((p) => URL.revokeObjectURL(p.url));
+    state.photos = [];
   }
 
-  function backToCamera() {
-    if (state.uploading) return;
+  function goCamera() {
     el.hint.textContent = 'Strike a pose ✦';
     if (liveTrack()) {
       el.video.play().catch(() => {});
       el.hint.style.opacity = '1';
       show('camera');
-    } else if (state.lastSource === 'native' || !navigator.mediaDevices) {
-      openNative();
     } else {
       startCamera();
     }
+  }
+
+  // "Retake" / "Choose again": repeat whatever the guest did last.
+  function retake() {
+    if (state.uploading) return;
+    if (state.lastSource === 'gallery') return openGallery();
+    if (state.lastSource === 'native' || !navigator.mediaDevices) return openNative();
+    goCamera();
+  }
+
+  // "Take another" / "Take a photo" after a successful send.
+  function another() {
+    if (state.uploading) return;
+    if (liveTrack() || state.lastSource === 'camera') return goCamera();
+    if (state.lastSource === 'native') return openNative();
+    show('welcome');
   }
 
   /* ---------------- Upload ---------------- */
@@ -331,81 +399,99 @@
     }
   }
 
-  async function sendPhoto() {
-    const photo = state.photo;
-    if (!photo || state.uploading || state.sent) return;
+  // Upload one photo with retries. say(text) shows progress. Returns { ok, fatal }.
+  async function uploadOne(photo, say) {
+    if (photo.blob.size > MAX_FILE_BYTES) return { ok: false, fatal: 'too large' };
+    if (!photo.base64) photo.base64 = await blobToBase64(photo.blob);
+    const body = JSON.stringify({ fileName: photo.name, mimeType: photo.mime, image: photo.base64, code: CFG.EVENT_CODE });
+
+    let delay = FIRST_RETRY_MS;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let reason = 'Connection problem';
+      try {
+        const data = await postOnce(body);
+        if (data && data.ok) { photo.base64 = null; return { ok: true }; }
+        const msg = (data && data.error) || 'unknown error';
+        // Only retry errors that can fix themselves (busy / quota / timeout). Setup errors fail fast.
+        if (FATAL_ERRORS.includes(msg) || !TRANSIENT_ERROR.test(msg)) return { ok: false, fatal: msg };
+        reason = 'Upload service busy';
+        console.warn(`Upload attempt ${attempt}: server said "${msg}"`);
+      } catch (e) {
+        if (e && e.name === 'BadReply') return { ok: false, fatal: e.message };
+        console.warn(`Upload attempt ${attempt} failed`, e);
+      }
+      if (attempt < MAX_ATTEMPTS) {
+        for (let s = Math.round(delay / 1000); s > 0; s--) {
+          say(`${reason} — retrying in ${s}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`);
+          await sleep(1000);
+        }
+        delay *= 2;
+      }
+    }
+    return { ok: false, fatal: '' };
+  }
+
+  async function sendPhotos() {
+    const todo = state.photos.filter((p) => p.status !== 'done');
+    if (!todo.length || state.uploading) return;
     if (!isConfigured()) {
       setStatus('Uploads aren’t set up yet — add UPLOAD_URL in config.js (see SETUP.md).', 'error');
       return;
     }
 
+    const total = state.photos.length;
+    const multi = total > 1;
     state.uploading = true;
     el.sendBtn.disabled = true;
     el.retakeBtn.disabled = true;
     setStatus('');
-    el.sendingText.textContent = `Sending… (${formatMB(photo.blob.size)})`;
-    el.sendingOverlay.classList.add('show');
+    if (!multi) el.sendingOverlay.classList.add('show');
 
-    let ok = false;
     let fatal = '';
-    try {
-      if (!photo.base64) photo.base64 = await blobToBase64(photo.blob);
-      const body = JSON.stringify({ fileName: photo.name, mimeType: photo.mime, image: photo.base64, code: CFG.EVENT_CODE });
-
-      let delay = FIRST_RETRY_MS;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        let reason = 'Connection problem';
-        try {
-          const data = await postOnce(body);
-          if (data && data.ok) { ok = true; break; }
-          const msg = (data && data.error) || 'unknown error';
-          // Only retry errors that can fix themselves (busy / quota / timeout). Setup errors fail fast.
-          if (FATAL_ERRORS.includes(msg) || !TRANSIENT_ERROR.test(msg)) { fatal = msg; break; }
-          reason = 'Upload service busy';
-          console.warn(`Upload attempt ${attempt}: server said "${msg}"`);
-        } catch (e) {
-          if (e && e.name === 'BadReply') { fatal = e.message; break; }
-          console.warn(`Upload attempt ${attempt} failed`, e);
-        }
-        if (attempt < MAX_ATTEMPTS) {
-          for (let s = Math.round(delay / 1000); s > 0; s--) {
-            el.sendingText.textContent = `${reason} — retrying in ${s}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`;
-            await sleep(1000);
-          }
-          el.sendingText.textContent = `Sending… (try ${attempt + 1} of ${MAX_ATTEMPTS})`;
-          delay *= 2;
-        }
-      }
-    } catch (e) {
-      console.error(e);
+    for (const p of todo) {
+      const idx = state.photos.indexOf(p) + 1;
+      const say = multi ? (t) => setStatus(`Photo ${idx} of ${total}: ${t}`) : (t) => { el.sendingText.textContent = t; };
+      say(multi ? 'sending…' : `Sending… (${formatMB(p.blob.size)})`);
+      setTile(p, 'sending');
+      let r;
+      try { r = await uploadOne(p, say); } catch (e) { console.error(e); r = { ok: false, fatal: '' }; }
+      if (r.ok) { setTile(p, 'done'); continue; }
+      setTile(p, 'failed');
+      fatal = r.fatal;
+      if (r.fatal !== 'too large') break; // connection/setup problem — the rest would fail too
     }
 
     state.uploading = false;
     el.sendingOverlay.classList.remove('show');
+    const done = state.photos.filter((p) => p.status === 'done').length;
 
-    if (ok) {
-      state.sent = true;
+    if (done === total) {
       makeBurst();
       el.doneOverlay.classList.add('show');
       el.actionsReview.hidden = true;
       el.actionsDone.hidden = false;
       el.saveBtn.hidden = true;
       setStatus('');
-    } else {
-      el.sendBtn.disabled = false;
-      el.retakeBtn.disabled = false;
-      el.sendBtn.lastChild.textContent = ' Try again';
-      const why = fatal === 'too large' ? 'This photo is too large to upload.'
-        : fatal === 'bad code' ? 'Upload rejected (event code mismatch).'
-        : fatal ? `Upload failed: ${fatal}.`
-        : 'Couldn’t send your photo. Check your connection and try again.';
-      setStatus(why + ' You can still save it to your phone.', 'error');
+      return;
     }
+
+    const left = state.photos.filter((p) => p.status !== 'done');
+    const allTooBig = left.every((p) => p.blob.size > MAX_FILE_BYTES);
+    el.sendBtn.disabled = allTooBig;
+    el.retakeBtn.disabled = false;
+    el.sendBtn.lastChild.textContent = multi ? ` Send remaining ${left.length}` : ' Try again';
+    const why = fatal === 'too large' ? (multi ? 'Some photos are too large (max 35 MB each).' : 'This photo is too large to upload (max 35 MB).')
+      : fatal === 'bad code' ? 'Upload rejected (event code mismatch).'
+      : fatal ? `Upload failed: ${fatal}.`
+      : 'Couldn’t send. Check your connection and try again.';
+    const prefix = multi && done ? `${done} of ${total} sent. ` : '';
+    const tail = state.lastSource === 'gallery' ? '' : ' You can still save it to your phone.';
+    setStatus(prefix + why + tail, 'error');
   }
 
   /* ---------------- Save to phone ---------------- */
   async function savePhoto() {
-    const photo = state.photo;
+    const photo = state.photos[0];
     if (!photo) return;
     const file = new File([photo.blob], photo.name, { type: photo.mime });
 
@@ -443,9 +529,13 @@
     state.facing = state.facing === 'environment' ? 'user' : 'environment';
     startCamera();
   });
-  el.retakeBtn.addEventListener('click', backToCamera);
-  el.anotherBtn.addEventListener('click', backToCamera);
-  el.sendBtn.addEventListener('click', sendPhoto);
+  el.welcomeGalleryBtn.addEventListener('click', openGallery);
+  el.galleryBtn.addEventListener('click', openGallery);
+  el.errorGalleryBtn.addEventListener('click', openGallery);
+  el.moreBtn.addEventListener('click', openGallery);
+  el.retakeBtn.addEventListener('click', retake);
+  el.anotherBtn.addEventListener('click', another);
+  el.sendBtn.addEventListener('click', sendPhotos);
   el.saveBtn.addEventListener('click', savePhoto);
   el.saveDoneBtn.addEventListener('click', savePhoto);
 
