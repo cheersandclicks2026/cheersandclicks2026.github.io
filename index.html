@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Cheers &amp; Clicks 2026</title>
   <meta name="description" content="Snap a photo at Cheers & Clicks 2026 and add it to the event album.">
-  <meta name="theme-color" content="#0b0d17">
+  <meta name="theme-color" content="#f1eee3">
   <meta property="og:title" content="Cheers &amp; Clicks 2026">
   <meta property="og:description" content="Capture the moment — add your photo to the event album.">
   <meta property="og:type" content="website">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f5d68a'/%3E%3Cstop offset='1' stop-color='%23c9973f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230b0d17'/%3E%3Cpath d='M32 8 C34 26 38 30 56 32 C38 34 34 38 32 56 C30 38 26 34 8 32 C26 30 30 26 32 8Z' fill='url(%23g)'/%3E%3C/svg%3E">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f1eee3'/%3E%3Crect x='5' y='5' width='54' height='54' rx='10' fill='none' stroke='%235f7a4f' stroke-width='2.5'/%3E%3Cpath d='M32 12 C34 27 37 30 52 32 C37 34 34 37 32 52 C30 37 27 34 12 32 C27 30 30 27 32 12Z' fill='%23e0675e'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Jost:wght@400;500;600&family=Parisienne&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <div class="bg" aria-hidden="true">
@@ -27,15 +27,56 @@
 
     <!-- WELCOME -->
     <section class="screen screen-welcome active" data-screen="welcome" aria-labelledby="welcome-title">
+      <!-- Ribbon frame + bow (decorative) -->
+      <div class="invite" aria-hidden="true">
+        <svg class="invite-frame" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path class="rib-a" d="M50 2 C70 2 86 3 91 8 C96 13 90 19 93 27 C97 40 98 58 95 71 C92 81 97 89 91 94 C85 99 66 98 50 98 C34 98 15 99 9 94 C3 89 8 81 5 71 C2 58 3 40 7 27 C10 19 4 13 9 8 C14 3 30 2 50 2 Z"/>
+          <path class="rib-b" d="M50 3.6 C69 3.6 84 4.6 88.6 9 C92.6 13 87.6 19.5 90.6 27.4 C94.4 40 95.4 58 92.6 70.6 C89.8 80 94.4 87.6 89.2 92 C83.6 96.6 66 96.4 50 96.4 C34 96.4 16.4 96.6 10.8 92 C5.6 87.6 10.2 80 7.4 70.6 C4.6 58 5.6 40 9.4 27.4 C12.4 19.5 7.4 13 11.4 9 C16 4.6 31 3.6 50 3.6 Z"/>
+        </svg>
+        <svg class="invite-bow" viewBox="0 0 200 92">
+          <g id="bowHalf">
+            <path d="M93 40 C86 55 74 68 56 86 L67 90 C82 74 93 60 99 44 Z"/>
+            <path class="fold" d="M95 46 C88 60 78 72 62 87"/>
+            <path d="M94 30 C80 9 52 -1 33 5 C18 10 16 28 29 36 C44 45 72 40 92 36 Z"/>
+            <path class="fold" d="M90 32 C76 17 54 10 40 15 C31 19 31 28 40 31 C52 34 70 33 88 34"/>
+          </g>
+          <use href="#bowHalf" transform="matrix(-1 0 0 1 200 0)"/>
+          <ellipse cx="100" cy="35" rx="10" ry="9"/>
+          <path class="fold" d="M95 30 C98 34 98 38 95 41 M105 30 C102 34 102 38 105 41"/>
+        </svg>
+      </div>
+
       <div class="welcome-inner">
-        <p class="eyebrow"><span class="spark">✦</span> You're invited to snap <span class="spark">✦</span></p>
+        <p class="eyebrow">You're invited<br>to snap at</p>
         <h1 class="wordmark" id="welcome-title">
           <span class="wm-line">Cheers</span>
           <span class="wm-amp">&amp;</span>
           <span class="wm-line">Clicks</span>
         </h1>
         <p class="year">2026</p>
-        <p class="tagline">Capture the moment. Every photo lands in our event album.</p>
+
+        <!-- Champagne tower (decorative line art) -->
+        <svg class="tower" viewBox="0 0 120 86" aria-hidden="true">
+          <defs>
+            <g id="coupe">
+              <path d="M-13 0 C-12 9 -5 11 0 11 C5 11 12 9 13 0 Z"/>
+              <ellipse cx="0" cy="0" rx="13" ry="2.2"/>
+              <path class="deco" d="M-7 4.5 Q-3.5 7.5 0 4.5 Q3.5 7.5 7 4.5"/>
+              <path d="M0 11 V21"/>
+              <ellipse cx="0" cy="22" rx="6" ry="1.6"/>
+            </g>
+          </defs>
+          <circle class="bub" cx="57" cy="5" r="1.3"/><circle class="bub" cx="63" cy="2.5" r="1"/><circle class="bub" cx="60" cy="8" r=".9"/>
+          <use href="#coupe" x="60" y="12"/>
+          <use href="#coupe" x="46" y="35"/><use href="#coupe" x="74" y="35"/>
+          <use href="#coupe" x="32" y="58"/><use href="#coupe" x="60" y="58"/><use href="#coupe" x="88" y="58"/>
+          <path class="spk c" d="M22 22 Q22 26 26 26 Q22 26 22 30 Q22 26 18 26 Q22 26 22 22 Z"/>
+          <path class="spk" d="M100 14 Q100 17 103 17 Q100 17 100 20 Q100 17 97 17 Q100 17 100 14 Z"/>
+          <path class="spk c" d="M106 40 Q106 42.5 108.5 42.5 Q106 42.5 106 45 Q106 42.5 103.5 42.5 Q106 42.5 106 40 Z"/>
+          <path class="spk" d="M12 48 Q12 50.5 14.5 50.5 Q12 50.5 12 53 Q12 50.5 9.5 50.5 Q12 50.5 12 48 Z"/>
+        </svg>
+
+        <p class="tagline">Capture the moment — every photo lands in our event album.</p>
 
         <button class="btn btn-gold btn-xl" id="startBtn" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-1.8A2 2 0 0 1 10.6 3.4h2.8a2 2 0 0 1 1.6.8L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.4" r="3.4"/></svg>
@@ -45,7 +86,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="9.5" r="1.6"/><path d="M20.5 15.5l-5-5-8.5 9"/></svg>
           Upload from my photos
         </button>
-        <button class="link-btn" id="welcomeNativeBtn" type="button">Or use my phone's camera app (max quality)</button>
+        <button class="link-btn" id="welcomeNativeBtn" type="button">Or use my camera app (max quality)</button>
         <p class="fineprint">The camera asks for permission first. Photos are only shared with the event organisers.</p>
       </div>
     </section>
