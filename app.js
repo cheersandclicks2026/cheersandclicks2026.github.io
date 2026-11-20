@@ -406,6 +406,7 @@
     const body = JSON.stringify({ fileName: photo.name, mimeType: photo.mime, image: photo.base64, code: CFG.EVENT_CODE });
 
     let delay = FIRST_RETRY_MS;
+    let lastBadReply = '';
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       let reason = 'Connection problem';
       try {
@@ -417,18 +418,25 @@
         reason = 'Upload service busy';
         console.warn(`Upload attempt ${attempt}: server said "${msg}"`);
       } catch (e) {
-        if (e && e.name === 'BadReply') return { ok: false, fatal: e.message };
+        // An HTML page instead of JSON: when overloaded, Google answers with an HTML error page
+        // ("too many scripts running simultaneously"), so this is retried too. If it never
+        // clears up, the message about the deployment setting is shown at the end.
+        if (e && e.name === 'BadReply') { lastBadReply = e.message; reason = 'Upload service busy'; }
         console.warn(`Upload attempt ${attempt} failed`, e);
       }
       if (attempt < MAX_ATTEMPTS) {
-        for (let s = Math.round(delay / 1000); s > 0; s--) {
-          say(`${reason} — retrying in ${s}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`);
-          await sleep(1000);
+        // Random jitter so a crowd that failed together doesn't retry at the same instant.
+        let left = Math.round(delay * (0.6 + Math.random() * 0.8));
+        while (left > 0) {
+          say(`${reason} — retrying in ${Math.ceil(left / 1000)}s (try ${attempt + 1} of ${MAX_ATTEMPTS})…`);
+          const step = left % 1000 || 1000;
+          await sleep(step);
+          left -= step;
         }
         delay *= 2;
       }
     }
-    return { ok: false, fatal: '' };
+    return { ok: false, fatal: lastBadReply };
   }
 
   async function sendPhotos() {
